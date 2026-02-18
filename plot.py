@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def inspect_and_plot_new_data():
     # Load the new files
-    son = np.load('son.npz')
-    soff = np.load('soff.npz')
+    son = np.load('data/son.npz')
+    soff = np.load('data/soff.npz')
     
     print("New SON Metadata:")
     print(f"  Center Freq: {son['lo_freq']/1e6 if 'lo_freq' in son else 'N/A'} MHz")
