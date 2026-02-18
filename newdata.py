@@ -3,46 +3,73 @@ import ugradio
 import ugradio.timing as timing
 import os
 
-# Parameters for Section 6.2
-TARGET_RF   = 1420.405752e6 # The frequency of interest
-SAMPLE_RATE = 2.4e6         #
+# Lab Constants
+HI_FREQ     = 1420.405752e6
+SAMPLE_RATE = 2.4e6
 NSAMPLES    = 2048
-N_BLOCKS    = 500           # Integration blocks
+N_BLOCKS    = 500
 OUT_DIR     = "data"
 
-def capture_at(label, rf_freq):
-    """Captures data at a specific RF tuning."""
-    print(f"\n[{label}] Tuning SDR to {rf_freq/1e6:.3f} MHz...")
-    s = ugradio.sdr.SDR(center_freq=rf_freq, sample_rate=SAMPLE_RATE, gain=40)
+def zap_dc(spec):
+    """Removes the hardware DC spike at the center of the FFT."""
+    s = spec.copy()
+    c = len(s) // 2
+    # Interpolate across the center 3 bins to remove the spike
+    s[c-1:c+2] = (s[c-2] + s[c+2]) / 2
+    return s
+
+def power_spectrum(iq, nsamples=NSAMPLES):
+    """Calculates power spectrum with Hann windowing and DC zapping."""
+    # 1. Apply Hann Window to reduce spectral leakage
+    w = np.hanning(len(iq))
+    iq_windowed = iq * w
     
-    spectra = np.zeros((N_BLOCKS, NSAMPLES))
-    for i in range(N_BLOCKS):
+    # 2. Compute the FFT and shift
+    spec = np.abs(np.fft.fftshift(np.fft.fft(iq_windowed, n=nsamples))) ** 2
+    
+    # 3. Zap the DC spike
+    return zap_dc(spec)
+
+def freq_axis(lo_freq, rate=SAMPLE_RATE, nsamples=NSAMPLES):
+    """Generates the RF axis based on the SDR's Local Oscillator."""
+    return np.fft.fftshift(np.fft.fftfreq(nsamples, 1.0/rate)) + lo_freq
+
+def check_levels(iq):
+    """Verifies gain to prevent clipping/quantization."""
+    r = iq.real
+    std = r.std()
+    print(f"  Levels: std={std:.4f}, min={r.min():.4f}, max={r.max():.4f}")
+    if np.mean(np.abs(r) > 0.95 * np.abs(r).max()) > 0.01:
+        print("  !! WARNING: Clipping detected - Lower Gain")
+    elif std < 0.005:
+        print("  !! WARNING: Low Signal - Increase Gain")
+
+def capture_at(label, lo_freq, nblocks=N_BLOCKS):
+    """Captures data at a specific LO frequency."""
+    print(f"\n[{label}] Tuning SDR (LO) to {lo_freq/1e6:.3f} MHz...")
+    s = ugradio.sdr.SDR(freq=lo_freq, rate=SAMPLE_RATE, gain=40)
+    
+    spectra = np.zeros((nblocks, NSAMPLES))
+    for i in range(nblocks):
         try:
             raw = s.capture_data(nblocks=1, nsamples=NSAMPLES)
-            # Power spectrum calculation
-            spectra[i] = np.abs(np.fft.fftshift(np.fft.fft(raw[0])))**2
-            if i == 0:
-                # Level check for Section 6.2
-                print(f"  Levels: std={raw[0].real.std():.4f}, max={raw[0].real.max():.4f}")
-        except:
+            spectra[i] = power_spectrum(raw[0])
+            if i == 0: check_levels(raw[0])
+        except Exception as e:
+            print(f"  Error at block {i}: {e}")
             spectra[i] = np.nan
     s.close()
 
-    # Create frequency axis centered on the tuning frequency
-    freqs = np.fft.fftshift(np.fft.fftfreq(NSAMPLES, 1.0/SAMPLE_RATE)) + rf_freq
+    freqs = freq_axis(lo_freq)
     
     fname = os.path.join(OUT_DIR, f"{label}.npz")
-    np.savez(fname, spectra=spectra, freqs_hz=freqs, center_freq=rf_freq)
-    print(f"  Saved to {fname}")
+    np.savez(fname, spectra=spectra, freqs_hz=freqs, lo_freq=lo_freq)
+    print(f"  → Saved to {fname}")
     return fname
 
-# --- RUN EXPERIMENT ---
-os.makedirs(OUT_DIR, exist_ok=True)
-
-# Frequency Switching: Position 1 (Shifted down 0.5 MHz)
-capture_at("son", TARGET_RF - 0.5e6)
-
-# Frequency Switching: Position 2 (Shifted up 0.5 MHz)
-capture_at("soff", TARGET_RF + 0.5e6)
-
-print("\nData collection complete. Run visualize.py next.")
+if __name__ == "__main__":
+    os.makedirs(OUT_DIR, exist_ok=True)
+    # Perform Frequency Switching
+    capture_at("son", HI_FREQ - 0.5e6)
+    capture_at("soff", HI_FREQ + 0.5e6)
+    print("\nDone. Use visualize.py to see the bandpass-corrected ratio.")
