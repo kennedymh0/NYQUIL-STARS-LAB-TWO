@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the data
-d_on = np.load('son.npz')
-d_off = np.load('soff.npz')
+d_on = np.load('data/son.npz')
+d_off = np.load('data/soff.npz')
 
 # Averages
-s_on = np.nanmean(d_on['spectra'], axis=0)
-s_off = np.nanmean(d_off['spectra'], axis=0)
+s_on_z = np.nanmean(d_on['spectra'], axis=0)
+s_off_z = np.nanmean(d_off['spectra'], axis=0)
 f_on = d_on['freqs_hz']
 f_off = d_off['freqs_hz']
 
@@ -16,6 +16,7 @@ HI_REST = 1420.405752e6
 C = 299792.458 # km/s
 
 # 1. APPLY DC ZAP (Manual fix for the 0Hz spike)
+'''
 def zap(data):
     d = data.copy()
     c = len(d)//2
@@ -24,6 +25,7 @@ def zap(data):
 
 s_on_z = zap(s_on)
 s_off_z = zap(s_off)
+'''
 
 # 2. RATIO & SMOOTHING
 ratio = s_on_z / s_off_z

@@ -47,7 +47,7 @@ def check_levels(iq):
 def capture_at(label, lo_freq, nblocks=N_BLOCKS):
     """Captures data at a specific LO frequency."""
     print(f"\n[{label}] Tuning SDR (LO) to {lo_freq/1e6:.3f} MHz...")
-    s = ugradio.sdr.SDR(freq=lo_freq, rate=SAMPLE_RATE, gain=40)
+    s = ugradio.sdr.SDR(center_freq=lo_freq, sample_rate=SAMPLE_RATE, gain=40)
     
     spectra = np.zeros((nblocks, NSAMPLES))
     for i in range(nblocks):
@@ -70,6 +70,6 @@ def capture_at(label, lo_freq, nblocks=N_BLOCKS):
 if __name__ == "__main__":
     os.makedirs(OUT_DIR, exist_ok=True)
     # Perform Frequency Switching
-    capture_at("son", HI_FREQ - 0.5e6)
-    capture_at("soff", HI_FREQ + 0.5e6)
+    capture_at("son", HI_FREQ - 1.5e6)
+    capture_at("soff", HI_FREQ + 1.5e6)
     print("\nDone. Use visualize.py to see the bandpass-corrected ratio.")

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def advanced_analysis():
     # Load the data
-    d_on = np.load('son.npz')
-    d_off = np.load('soff.npz')
+    d_on = np.load('data/son.npz')
+    d_off = np.load('data/soff.npz')
     
     # Average the spectra
     s_on = np.nanmean(d_on['spectra'], axis=0)
