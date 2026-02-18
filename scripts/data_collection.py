@@ -5,22 +5,22 @@ import ugradio.doppler as doppler
 import os
 import time
 
-HI_FREQ     = 1420.405752e6
+HI_FREQ     = 1400e6
 SAMPLE_RATE = 2.4e6
 NSAMPLES    = 2048
 N_BLOCKS    = 200
 SDR_CENTER  = 10e6
 
-def make_sdr(center_freq=SDR_CENTER, rate=SAMPLE_RATE, gain=40):
-    s = ugradio.sdr.SDR(freq=center_freq, rate=rate, gain=gain)
+def make_sdr(center_freq=HI_FREQ, sample_rate=SAMPLE_RATE, gain=40):
+    s = ugradio.sdr.SDR(center_freq=center_freq, sample_rate=SAMPLE_RATE, gain=gain)
     return s
 
 
 def power_spectrum(iq, nsamples=NSAMPLES):
     w = np.hanning(len(iq))
-    return np.abs(np.fft.fftshift(np.fft.fft(iq * w, n=nsamples))) ** 2
+    return np.abs(np.fft.fftshift(np.fft.fft(iq, n=nsamples))) ** 2
 
-def freq_axis(center_freq=SDR_CENTER, rate=SAMPLE_RATE, nsamples=NSAMPLES):
+def freq_axis(center_freq=0, rate=SAMPLE_RATE, nsamples=NSAMPLES):
     return np.fft.fftshift(np.fft.fftfreq(nsamples, 1.0/rate)) + center_freq
 
 def check_levels(iq):
@@ -34,7 +34,7 @@ def check_levels(iq):
         print("  Levels OK")
 
 
-def measure(label, nblocks=N_BLOCKS, out_dir="data"):
+def measure(label, nblocks=N_BLOCKS, out_dir="data", lo_freq=1400e6):
     os.makedirs(out_dir, exist_ok=True)
 
     jd_start  = timing.julian_date()
@@ -43,7 +43,7 @@ def measure(label, nblocks=N_BLOCKS, out_dir="data"):
 
     print(f"\n[{label}] UTC={ut_start}  LST={lst_start:.4f}h  JD={jd_start:.6f}")
 
-    s = make_sdr()
+    s = make_sdr(center_freq=lo_freq)
     spectra = np.zeros((nblocks, NSAMPLES))
 
     for i in range(nblocks):
@@ -67,7 +67,7 @@ def measure(label, nblocks=N_BLOCKS, out_dir="data"):
              jd_end      = jd_end,
              jd_mid      = 0.5 * (jd_start + jd_end),
              lst_start   = lst_start,
-             center_freq = SDR_CENTER,
+             center_freq = lo_freq,
              sample_rate = SAMPLE_RATE,
              nblocks     = nblocks,
              nsamples    = NSAMPLES)
@@ -78,13 +78,13 @@ def measure(label, nblocks=N_BLOCKS, out_dir="data"):
 
 def observe_frequency_switch(nblocks=500, out_dir="data"):
     print("=== FREQUENCY SWITCHED OBSERVATION ===")
-    print("Set upstream LO to POSITION 1 (line in upper half). Press Enter.")
-    input()
-    s_on, f_on   = acquire("son",  nblocks=nblocks, out_dir=out_dir)
+    print("Set upstream LO to POSITION 1 (line in upper half). Type LO frequency (hz):")
+    lo1 = float(input())
+    s_on, f_on   = measure("son",  nblocks=nblocks, out_dir=out_dir, lo_freq=lo1)
 
-    print("\nSwitch upstream LO to POSITION 2 (line in lower half). Press Enter.")
-    input()
-    s_off, f_off = acquire("soff", nblocks=nblocks, out_dir=out_dir)
+    print("\nSwitch upstream LO to POSITION 2 (line in lower half). Type LO frequency (hz):")
+    lo2 = float(input())
+    s_off, f_off = measure("soff", nblocks=nblocks, out_dir=out_dir, lo_freq=lo2)
 
     return s_on, s_off
 
@@ -92,12 +92,12 @@ def observe_calibration(nblocks=50, out_dir="data"):
     print("\n=== CALIBRATION: COLD SKY ===")
     print("Horn at zenith, aperture clear. Press Enter.")
     input()
-    s_cold, f_cold = acquire("scold", nblocks=nblocks, out_dir=out_dir)
+    s_cold, f_cold = measure("scold", nblocks=nblocks, out_dir=out_dir)
 
     print("\n=== CALIBRATION: BLACKBODY ===")
     print("Fill horn aperture with people (~300K). Press Enter.")
     input()
-    s_cal, f_cal   = acquire("scal",  nblocks=nblocks, out_dir=out_dir)
+    s_cal, f_cal   = measure("scal",  nblocks=nblocks, out_dir=out_dir)
 
     return s_cold, s_cal
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
             raise SystemExit(1)
 
     if args.mode in ("line", "all"):
-        observe_frequency_switched(nblocks=args.nblocks, out_dir=args.outdir)
+        observe_frequency_switch(nblocks=args.nblocks, out_dir=args.outdir)
 
     if args.mode in ("cal", "all"):
         observe_calibration(nblocks=args.nblocks_cal, out_dir=args.outdir)
