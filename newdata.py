@@ -13,7 +13,7 @@ OUT_DIR     = "data"
 def capture_at(label, rf_freq):
     """Captures data at a specific RF tuning."""
     print(f"\n[{label}] Tuning SDR to {rf_freq/1e6:.3f} MHz...")
-    s = ugradio.sdr.SDR(freq=rf_freq, rate=SAMPLE_RATE, gain=40)
+    s = ugradio.sdr.SDR(center_freq=rf_freq, sample_rate=SAMPLE_RATE, gain=40)
     
     spectra = np.zeros((N_BLOCKS, NSAMPLES))
     for i in range(N_BLOCKS):
