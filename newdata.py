@@ -70,6 +70,6 @@ def capture_at(label, lo_freq, nblocks=N_BLOCKS):
 if __name__ == "__main__":
     os.makedirs(OUT_DIR, exist_ok=True)
     # Perform Frequency Switching
-    capture_at("son", HI_FREQ - 1.5e6)
-    capture_at("soff", HI_FREQ + 1.5e6)
+    capture_at("son", HI_FREQ - .6e6)
+    capture_at("soff", HI_FREQ + .6e6)
     print("\nDone. Use visualize.py to see the bandpass-corrected ratio.")

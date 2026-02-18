@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load data
-son = np.load('son.npz')
-soff = np.load('soff.npz')
+son = np.load('data/son.npz')
+soff = np.load('data/soff.npz')
 
 spectra_on = son['spectra']
 spectra_off = soff['spectra']
@@ -31,11 +31,11 @@ center_idx = len(freqs_on) // 2
 center_f = lo_on # The LO is the center of the window
 
 # Find peaks on left and right side of center
-left_half = ratio_smooth[:center_idx-50] # exclude zapped area
-right_half = ratio_smooth[center_idx+50:]
+left_half = ratio_smooth[:center_idx-20] # exclude zapped area
+right_half = ratio_smooth[center_idx+20:]
 
 p_left_idx = np.argmax(left_half)
-p_right_idx = np.argmax(right_half) + (center_idx + 50)
+p_right_idx = np.argmax(right_half) + (center_idx + 20)
 
 f_left = freqs_on[p_left_idx]
 f_right = freqs_on[p_right_idx]
