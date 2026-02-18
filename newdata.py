@@ -6,7 +6,7 @@ import os
 # Lab Constants
 HI_FREQ     = 1420.405752e6
 SAMPLE_RATE = 2.4e6
-NSAMPLES    = 2048
+NSAMPLES    = 4096
 N_BLOCKS    = 500
 OUT_DIR     = "data"
 
@@ -52,9 +52,9 @@ def capture_at(label, lo_freq, nblocks=N_BLOCKS):
     spectra = np.zeros((nblocks, NSAMPLES))
     for i in range(nblocks):
         try:
-            raw = s.capture_data(nblocks=1, nsamples=NSAMPLES)
-            spectra[i] = power_spectrum(raw[0])
-            if i == 0: check_levels(raw[0])
+            raw = s.capture_data(nblocks=3, nsamples=NSAMPLES)
+            spectra[i] = power_spectrum(raw[2])
+            if i == 0: check_levels(raw[2])
         except Exception as e:
             print(f"  Error at block {i}: {e}")
             spectra[i] = np.nan
@@ -70,6 +70,8 @@ def capture_at(label, lo_freq, nblocks=N_BLOCKS):
 if __name__ == "__main__":
     os.makedirs(OUT_DIR, exist_ok=True)
     # Perform Frequency Switching
-    capture_at("son", HI_FREQ - 1.2e6)
-    capture_at("soff", HI_FREQ + 1.2e6)
+    for i in range(1, 10):
+        shift = 0.5 + i*0.1
+        capture_at(f"son_{shift}", HI_FREQ + shift*(1e6))
+        capture_at(f"soff_{shift}", HI_FREQ + shift*(1e6))
     print("\nDone. Use visualize.py to see the bandpass-corrected ratio.")
