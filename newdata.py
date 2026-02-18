@@ -70,4 +70,6 @@ def observe_frequency_switch(lo_on=1420.4e6, lo_off=1421.4e6, nblocks=500, out_d
     Shifting the LO moves the 21cm line within the 2.4MHz window.
     """
     print("=== STARTING FREQUENCY SWITCHED DATA COLLECTION ===")
-    s_on, f_on = measure("son", target_freq=lo_on, n
+    s_on, f_on = measure("son", target_freq=lo_on, nblocks=nblocks, out_dir=out_dir)
+    s_off, f_off = measure("soff", target_freq=lo_off, nblocks=nblocks, out_dir=out_dir)
+    return s_on, s_off
