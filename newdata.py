@@ -3,73 +3,46 @@ import ugradio
 import ugradio.timing as timing
 import os
 
-# Constants from Lab Manual
-HI_FREQ = 1420.405752e6  # 21cm Line
-SAMPLE_RATE = 2.4e6      # Recommended stable rate
-NSAMPLES = 2048
-N_BLOCKS = 200
+# Parameters for Section 6.2
+TARGET_RF   = 1420.405752e6 # The frequency of interest
+SAMPLE_RATE = 2.4e6         #
+NSAMPLES    = 2048
+N_BLOCKS    = 500           # Integration blocks
+OUT_DIR     = "data"
 
-def make_sdr(target_freq, rate=SAMPLE_RATE, gain=40):
-    """
-    Tunes the R820T2 analog mixer to target_freq.
-    The manual notes that 0-frequency (DC) spikes occur at this center.
-    """
-    return ugradio.sdr.SDR(freq=target_freq, rate=rate, gain=gain)
-
-def power_spectrum(iq, nsamples=NSAMPLES):
-    # Hann windowing removed per request; using raw FFT for birdie testing
-    return np.abs(np.fft.fftshift(np.fft.fft(iq, n=nsamples))) ** 2
-
-def freq_axis(center_freq, rate=SAMPLE_RATE, nsamples=NSAMPLES):
-    """Returns the actual RF frequencies observed."""
-    return np.fft.fftshift(np.fft.fftfreq(nsamples, 1.0/rate)) + center_freq
-
-def check_levels(iq):
-    """Experimental verification of signal levels."""
-    r = iq.real
-    std = r.std()
-    print(f"  std={std:.4f}  min={r.min():.4f}  max={r.max():.4f}")
-    if np.mean(np.abs(r) > 0.95 * np.abs(r).max()) > 0.01:
-        print("  !! Clipping detected — reduce gain")
-    elif std < 0.005:
-        print("  !! Heavily quantized — increase gain")
-    else:
-        print("  Levels OK")
-
-def measure(label, target_freq, nblocks=N_BLOCKS, out_dir="data"):
-    os.makedirs(out_dir, exist_ok=True)
-    jd_start = timing.julian_date()
+def capture_at(label, rf_freq):
+    """Captures data at a specific RF tuning."""
+    print(f"\n[{label}] Tuning SDR to {rf_freq/1e6:.3f} MHz...")
+    s = ugradio.sdr.SDR(freq=rf_freq, rate=SAMPLE_RATE, gain=40)
     
-    print(f"\n[{label}] Tuning SDR to {target_freq/1e6:.3f} MHz...")
-    s = make_sdr(target_freq)
-    spectra = np.zeros((nblocks, NSAMPLES))
-
-    for i in range(nblocks):
+    spectra = np.zeros((N_BLOCKS, NSAMPLES))
+    for i in range(N_BLOCKS):
         try:
             raw = s.capture_data(nblocks=1, nsamples=NSAMPLES)
-            spectra[i] = power_spectrum(raw[0])
-            if i == 0: check_levels(raw[0])
-        except Exception as e:
+            # Power spectrum calculation
+            spectra[i] = np.abs(np.fft.fftshift(np.fft.fft(raw[0])))**2
+            if i == 0:
+                # Level check for Section 6.2
+                print(f"  Levels: std={raw[0].real.std():.4f}, max={raw[0].real.max():.4f}")
+        except:
             spectra[i] = np.nan
-
     s.close()
-    
-    fname = os.path.join(out_dir, f"{label}_{int(jd_start * 1e5)}.npz")
-    np.savez(fname,
-             spectra=spectra,
-             freqs_hz=freq_axis(target_freq),
-             center_freq=target_freq,
-             jd_start=jd_start,
-             sample_rate=SAMPLE_RATE)
-    print(f"  → Saved: {fname}")
-    return spectra, fname
 
-def observe_frequency_switch(lo_on=1420.4e6, lo_off=1421.4e6, nblocks=500, out_dir="data"):
-    """
-    Performs Frequency Switching.
-    Shifting the LO moves the 21cm line within the 2.4MHz window.
-    """
-    print("=== STARTING FREQUENCY SWITCHED DATA COLLECTION ===")
-    s_on, f_on = measure("son", target_freq=lo_on, nblocks=nblocks, out_dir=out_dir)
-    s_off, f_off = measure("soff", target_freq=lo_off, nblocks=nblocks, out_dir=out_dir)
-    return s_on, s_off
+    # Create frequency axis centered on the tuning frequency
+    freqs = np.fft.fftshift(np.fft.fftfreq(NSAMPLES, 1.0/SAMPLE_RATE)) + rf_freq
+    
+    fname = os.path.join(OUT_DIR, f"{label}.npz")
+    np.savez(fname, spectra=spectra, freqs_hz=freqs, center_freq=rf_freq)
+    print(f"  Saved to {fname}")
+    return fname
+
+# --- RUN EXPERIMENT ---
+os.makedirs(OUT_DIR, exist_ok=True)
+
+# Frequency Switching: Position 1 (Shifted down 0.5 MHz)
+capture_at("son", TARGET_RF - 0.5e6)
+
+# Frequency Switching: Position 2 (Shifted up 0.5 MHz)
+capture_at("soff", TARGET_RF + 0.5e6)
+
+print("\nData collection complete. Run visualize.py next.")
