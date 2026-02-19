@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def advanced_analysis():
     # Load the data
-    d_on = np.load('data/son_1.4.npz')
-    d_off = np.load('data/soff_1.4.npz')
+    d_on = np.load('data/son_1.1.npz')
+    d_off = np.load('data/soff_1.1.npz')
     
     # Average the spectra
     s_on = np.nanmean(d_on['spectra'], axis=0)
@@ -16,7 +16,7 @@ def advanced_analysis():
     
     # The ratio should be computed on the bin indices to cancel the bandpass
     # because the bandpass is a property of the hardware (filter shape relative to LO)
-    ratio = s_on / s_off
+    ratio = s_on/s_off
     
     # Smoothing for visibility
     def smooth(x, window=15):
@@ -50,29 +50,29 @@ def advanced_analysis():
     
     # Plot 2: Ratio (Line Shape)
     # We plot this vs the frequency axis of the 'on' measurement
-    ax2.plot(f_on/1e6, ratio, alpha=0.2, color='gray', label='Raw Ratio')
-    ax2.plot(f_on/1e6, r_smooth, color='black', linewidth=2, label='Smoothed Ratio')
+    #ax2.plot(f_on/1e6, ratio, alpha=0.2, color='gray', label='Raw Ratio')
+    #ax2.plot(f_on/1e6, r_smooth, color='black', linewidth=2, label='Smoothed Ratio')
     
     # Annotate peak and dip
-    ax2.annotate(f'Peak (Line in ON)\n{f_on[peak_idx]/1e6:.2f} MHz', 
-                 xy=(f_on[peak_idx]/1e6, r_smooth[peak_idx]), 
-                 xytext=(f_on[peak_idx]/1e6 + 0.2, r_smooth[peak_idx] + 0.1),
-                 arrowprops=dict(facecolor='black', shrink=0.05))
+   # ax2.annotate(f'Peak (Line in ON)\n{f_on[peak_idx]/1e6:.2f} MHz', 
+                 #xy=(f_on[peak_idx]/1e6, r_smooth[peak_idx]), 
+                 #xytext=(f_on[peak_idx]/1e6 + 0.2, r_smooth[peak_idx] + 0.1),
+                 #arrowprops=dict(facecolor='black', shrink=0.05))
     
-    ax2.annotate(f'Dip (Line in OFF)\n{f_on[dip_idx]/1e6:.2f} MHz', 
-                 xy=(f_on[dip_idx]/1e6, r_smooth[dip_idx]), 
-                 xytext=(f_on[dip_idx]/1e6 - 0.8, r_smooth[dip_idx] - 0.1),
-                 arrowprops=dict(facecolor='red', shrink=0.05))
+    #ax2.annotate(f'Dip (Line in OFF)\n{f_on[dip_idx]/1e6:.2f} MHz', 
+                # xy=(f_on[dip_idx]/1e6, r_smooth[dip_idx]), 
+                 #xytext=(f_on[dip_idx]/1e6 - 0.8, r_smooth[dip_idx] - 0.1),
+                 #arrowprops=dict(facecolor='red', shrink=0.05))
     
-    ax2.axhline(1.0, color='blue', linestyle=':', alpha=0.5)
-    ax2.set_title("Bandpass-Corrected Line Shape (s_on / s_off)")
-    ax2.set_xlabel("Frequency (MHz)")
-    ax2.set_ylabel("Ratio Intensity")
-    ax2.set_ylim(0.4, 1.2) # Zooming in
-    ax2.legend()
-    ax2.grid(True, alpha=0.2)
+    #ax2.axhline(1.0, color='blue', linestyle=':', alpha=0.5)
+    #ax2.set_title("Bandpass-Corrected Line Shape (s_on / s_off)")
+    #ax2.set_xlabel("Frequency (MHz)")
+    #ax2.set_ylabel("Ratio Intensity")
+    #ax2.set_ylim(0.4, 1.2) # Zooming in
+    #ax2.legend()
+    #ax2.grid(True, alpha=0.2)
     
-    plt.tight_layout()
+   # plt.tight_layout()
     plt.savefig('clear_analysis.png')
     
     print(f"HI Frequency: {HI_FREQ/1e6:.4f} MHz")

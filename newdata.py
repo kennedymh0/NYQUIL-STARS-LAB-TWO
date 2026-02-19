@@ -7,7 +7,7 @@ import os
 HI_FREQ     = 1420.405752e6
 SAMPLE_RATE = 2.4e6
 NSAMPLES    = 4096
-N_BLOCKS    = 500
+N_BLOCKS    = 3
 OUT_DIR     = "data"
 
 def zap_dc(spec):
@@ -20,6 +20,9 @@ def zap_dc(spec):
 
 def power_spectrum(iq, nsamples=NSAMPLES):
     """Calculates power spectrum with Hann windowing and DC zapping."""
+    
+    #if iq.ndim ==2:
+        #iq = iq[:,0] +1j * iq[:,1]
     # 1. Apply Hann Window to reduce spectral leakage
     w = np.hanning(len(iq))
     iq_windowed = iq * w
@@ -37,28 +40,30 @@ def freq_axis(lo_freq, rate=SAMPLE_RATE, nsamples=NSAMPLES):
 def check_levels(iq):
     """Verifies gain to prevent clipping/quantization."""
     r = iq.real
+    #r = iq[:,0] if iq.ndim == 2 else iq.real
     std = r.std()
     print(f"  Levels: std={std:.4f}, min={r.min():.4f}, max={r.max():.4f}")
-    if np.mean(np.abs(r) > 0.95 * np.abs(r).max()) > 0.01:
+    if (r.min() = -128 or r.max() = 127):
         print("  !! WARNING: Clipping detected - Lower Gain")
-    elif std < 0.005:
+    elif (r.max() < 10 and r.min() > -10):
         print("  !! WARNING: Low Signal - Increase Gain")
 
 def capture_at(label, lo_freq, nblocks=N_BLOCKS):
     """Captures data at a specific LO frequency."""
     print(f"\n[{label}] Tuning SDR (LO) to {lo_freq/1e6:.3f} MHz...")
-    s = ugradio.sdr.SDR(center_freq=lo_freq, sample_rate=SAMPLE_RATE, gain=40)
+    s = ugradio.sdr.SDR(direct=False, center_freq=lo_freq, sample_rate=SAMPLE_RATE, gain=10)
     
     spectra = np.zeros((nblocks, NSAMPLES))
+    _raw = s.capture_data(nblocks=nblocks+1, nsamples=NSAMPLES)
+    raw = _raw[...,0]+1j * _raw[...,1]
+    s.close()
+    check_levels(raw[1])
     for i in range(nblocks):
         try:
-            raw = s.capture_data(nblocks=3, nsamples=NSAMPLES)
-            spectra[i] = power_spectrum(raw[2])
-            if i == 0: check_levels(raw[2])
+            spectra[i] = power_spectrum(raw[i+1])
         except Exception as e:
             print(f"  Error at block {i}: {e}")
             spectra[i] = np.nan
-    s.close()
 
     freqs = freq_axis(lo_freq)
     
@@ -73,5 +78,4 @@ if __name__ == "__main__":
     for i in range(1, 10):
         shift = 0.5 + i*0.1
         capture_at(f"son_{shift}", HI_FREQ + shift*(1e6))
-        capture_at(f"soff_{shift}", HI_FREQ + shift*(1e6))
     print("\nDone. Use visualize.py to see the bandpass-corrected ratio.")

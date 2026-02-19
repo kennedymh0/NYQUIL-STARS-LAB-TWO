@@ -2,13 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load data
-son = np.load('data/son.npz')
-soff = np.load('data/soff.npz')
+son = np.load('newdataa/secondtest/son_0.8.npz', allow_pickle=True)
+soff = np.load('newdataa/secondtest/off_0.8.npz', allow_pickle=True)
 
-spectra_on = son['spectra']
-spectra_off = soff['spectra']
-freqs_on = son['freqs_hz']
-lo_on = son['lo_freq']
+print(type(son['metadata']))
+spectra_on = son['p']
+spectra_off = soff['p']
+freqs_on = son['metadata'][0].get('HI FREQ')
+lo_on = son['metadata'][0].get('lo')
 
 avg_on = np.nanmean(spectra_on, axis=0)
 avg_off = np.nanmean(spectra_off, axis=0)
