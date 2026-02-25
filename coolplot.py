@@ -3,16 +3,16 @@ import matplotlib.pyplot as plt
 
 def advanced_analysis():
     # Load the data
-    d_on = np.load('data/son_1.1.npz')
-    d_off = np.load('data/soff_1.1.npz')
+    d_on = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_son_1.1.npz')
+    d_off = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_off_1.1.npz')
     
     # Average the spectra
-    s_on = np.nanmean(d_on['spectra'], axis=0)
-    s_off = np.nanmean(d_off['spectra'], axis=0)
+    s_on = np.nanmean(d_on['p'], axis=0)
+    s_off = np.nanmean(d_off['p'], axis=0)
     
     # Frequency axes
-    f_on = d_on['freqs_hz']
-    f_off = d_off['freqs_hz']
+    f_on = d_on['p']
+    f_off = d_off['p']
     
     # The ratio should be computed on the bin indices to cancel the bandpass
     # because the bandpass is a property of the hardware (filter shape relative to LO)
