@@ -1,24 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import ugradio 
 
-s_on = np.load('data/son.npz')
-s_off = np.load('data/soff.npz')
-freqs_off = s_off['freqs_hz']
-freqs_on = s_on['freqs_hz']
-lo_on = s_on['lo_freq']
-
-plt.rcParams['figure.figsize'] = (10,6)
-plt.rcParams['font.size'] = 12
-plt.rcParams['lines.linewidth'] = 1.5
-
-plt.figure(1) 
-plt.plot(freqs_on, s_on, label ='S_on (Signal)', color = 'plasma', alpha=0.9)
-plt.plot(freqs_off, s_off, label ='S_off (Signal)', color = 'viridis', alpha=0.9)
-
-plt.title('Average Power Spectra (Raw Data)')
-plt.xlabel('Frequency (MHz)')
-plt.ylabel('Power (arb)')
-plt.legend()
-plt.tight_layout()
-
-plt.savefig('average_power_spectrum.png', dpi=300)
+sdr = ugradio.sdr.SDR(direct=False, center_freq=1420.405e6, sample_rate=3.2e6, gain=10)
+_raw= sdr.capture_data(nblocks=2, nsamples=2048)
+print("shape:", _raw.shape, "dtype:", _raw.dtype)
+sdr.close()

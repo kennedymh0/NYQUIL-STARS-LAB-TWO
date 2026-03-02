@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def advanced_analysis():
     # Load the data
-    d_on = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_son_1.1.npz')
-    d_off = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_off_1.1.npz')
+    d_on = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_son_0.8.npz')
+    d_off = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/sig_gen_ang/SIG_GEN_ANG_off_0.8.npz')
     
     # Average the spectra
     s_on = np.nanmean(d_on['p'], axis=0)

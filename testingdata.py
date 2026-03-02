@@ -5,8 +5,8 @@ import scipy
 from scipy.optimize import curve_fit
 import math
 
-son = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/secondtest/son_1.0.npz', allow_pickle=True)
-soff = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/secondtest/off_1.0.npz', allow_pickle=True)
+son = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/secondtest/son_0.8.npz', allow_pickle=True)
+soff = np.load('/home/radiopi/Astro-121-Radio-Stars/LAB2/newdataa/secondtest/off_0.8.npz', allow_pickle=True)
 
 plt.plot(np.log10(son['p']))
 plt.plot(np.log10(soff['p']))

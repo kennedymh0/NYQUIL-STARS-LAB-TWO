@@ -4,14 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-SAMPLE_RATE=3.2e6
+SAMPLE_RATE=2.4e6
 HI_FREQ = 1420.405e6
-nblocks = 10
-NSAMPLES=4096
-GAIN = 10 # IN DBM
+nblocks = 10000
+NSAMPLES= 4096
+GAIN = 20 # IN DBM
 SG_GAIN = None # IN DBM
-MODE = "HORN_gc" # modes: 'SIG_GEN', 'HORN', 'HORN_BB'
-NOTE = "pointing at generator"
+MODE = "HORN_zenith" # modes: 'SIG_GEN', 'HORN', 'HORN_BB'
+NOTE = "pointing zenith measuring 5k blocks first time"
 
 cwd = os.getcwd()
 
@@ -37,35 +37,58 @@ def zap_dc(spec):
 def power_spectrum(iq, nsamples=NSAMPLES):
     """Calculates power spectrum with Hann windowing and DC zapping."""
     
-    #if iq.ndim ==2:
-        #iq = iq[:,0] +1j * iq[:,1]
-    # 1. Apply Hann Window to reduce spectral leakage
-    w = np.hanning(len(iq[0]))
-    p = []
-    for i in iq:
-        x = iq * w # applies window
-        spec = np.abs(np.fft.fftshift(np.fft.fft(x, n=nsamples))) ** 2
-        p.append(zap_dc(spec))
+    w = np.hanning(iq.shape[1])
+    windowed_iq = iq * w
+    fft_matrix = np.fft.fft(windowed_iq, nsamples, axis=1)
+    spec_matrix = np.abs(np.fft.fftshift(fft_matrix, axes=1)) ** 2
+    clean_specs = np.apply_along_axis(zap_dc, 1, spec_matrix)
+    avg_spec = np.mean(clean_specs, axis=0)
     
-    # 3. Zap the DC spike
-    return p
+    return avg_spec
+	
+def plot_hydrogen_line(p_avg, metadata):
+	lo = metadata['lo']
+	sr = metadata['sr']
+	nsamples = metadata['nsamples']
+	hi_freq = metadata['HI FREQ'] / 1e6
+	freqs = np.fft.fftshift(np.fft.fftfreq(nsamples, 1/sr))
+	freqs_mhz = (freqs + lo) / 1e6
+	
+	p_db = 10 * np.log10(p_avg)
+	
+	plt.figure(figsize=(12,6))
+	plt.plot(freqs_mhz, p_db, label='Averages Spectrum', color='blue')
+	
+	plt.axvline(hi_freq, color='red', linestyle='--', alpha=0.7,
+		label=f'HI LINE ({hi_freq:.3f} MHz)')
+	plt.title(f"Hydrogen Line Observation (LO: {lo/1e6:.2f} MHz)")
+	plt.xlabel("Frequency (MHz)")
+	plt.ylabel("Relative Power (dB)")
+	plt.grid(True, which='both', ls='-', alpha=0.5)
+	plt.legend()
+	
+	plt.show()
 	
 def capture_at(name, lo=1420e6):
-    s = ugradio.sdr.SDR(direct=False, center_freq=lo, sample_rate=SAMPLE_RATE, gain=10)
-    _raw = s.capture_data(nblocks=nblocks+1, nsamples=NSAMPLES)
+    all_spectra=[]
+    s = ugradio.sdr.SDR(direct=False, center_freq=lo, sample_rate=SAMPLE_RATE, gain=GAIN)
+    for i in range(nblocks//10):
+        _raw = s.capture_data(nblocks=11)
+        raw = _raw[...,0]+1j * _raw[...,1]
+        raw = raw[1:] #drop first block
+        spec = power_spectrum(raw)
+        all_spectra.append(spec)
+    s.close()
+    
+    final_avg = np.mean(all_spectra, axis=0)
+    
     local_now = ugradio.timing.local_time()
     print(local_now)
     ut_now = ugradio.timing.unix_time()
     jd_now = ugradio.timing.julian_date()
     lst_now = ugradio.timing.lst()
     print(lst_now)
-    s.close()
-    raw = _raw[...,0]+1j * _raw[...,1]
-    raw = raw[1:]
-    check_levels(raw[0])
-    plt.plot(raw[0].real)
-    plt.plot(raw[0].imag)
-    plt.show()
+
     metadata = {"lo": lo,
 		"sr": SAMPLE_RATE,
 		"HI FREQ": HI_FREQ,
@@ -79,25 +102,29 @@ def capture_at(name, lo=1420e6):
 		"NOTE": NOTE}			
     file_path = os.path.join("./newdataa", name)
     
-    p = power_spectrum(raw, nsamples=NSAMPLES)
-    np.savez(file_path, raw=raw, metadata=metadata, p=p)
+    plot_hydrogen_line(final_avg, metadata)
+    
+    # if there are lots of blocks discard the raw data
+    np.savez(file_path, metadata=metadata, p=final_avg) 
+		
+		
     
 print("Experiment calibrated for the following settings:\n"
     + f"SAMPLE RATE: {SAMPLE_RATE}\n"
     + f"RADIO FREQUENCY: {HI_FREQ}\n"
     + f"NUMBER OF BLOCKS: {nblocks}\n"
     + f"NUMBER OF SAMPLES: {NSAMPLES}\n"
-    + f"SIGNAL GENERATOR GAIN: {GAIN}\n"
-    + f"SDR GAIN: {SG_GAIN}\n"
+    + f"SIGNAL GENERATOR GAIN: {SG_GAIN}\n"
+    + f"SDR GAIN: {GAIN}\n"
     + f"MODE: {MODE}\n")
 print("If this is correct, press any key to continue.")
 input()
-if MODE == "HORN_gc":
-	for i in range(1, 10):
-		shift = 0.5 + i*0.1
-		capture_at(name=f"{MODE}_son_{shift}", lo=HI_FREQ + shift*(1e6))
-		capture_at(name=f"{MODE}_off_{shift}", lo=HI_FREQ - shift*(1e6))
-		print("\nDone.")
+#if MODE == "HORN_gc":
+#	for i in range(1, 10):
+#		shift = 0.5 + i*0.1
+#		capture_at(name=f"{MODE}_son_{shift}", lo=HI_FREQ + shift*(1e6))
+#		capture_at(name=f"{MODE}_off_{shift}", lo=HI_FREQ - shift*(1e6))
+#		print("\nDone.")
 		
 shift = 1420e6
 capture_at(name=f"{MODE}_{shift}", lo=shift)
